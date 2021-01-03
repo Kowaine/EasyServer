@@ -2,11 +2,13 @@
 @Author: Kowaine
 @Description: 一些基础的数据结构和类型
 @Date: 2021-01-03 22:25:39
-@LastEditTime: 2021-01-04 01:13:01
+@LastEditTime: 2021-01-04 02:42:11
 """
-import socket
-import asyncio
+from gevent import socket, monkey
 import sys
+import gevent
+
+monkey.patch_all()
 
 class Request(object):
     """
@@ -32,26 +34,35 @@ class BaseServer():
         self.server.bind((host, port))
         self.request_model = request_model
 
-    async def run(self):
+    def run(self):
         """
         启动服务器
         """
         self.server.listen(self.max_connection)
         while True:
             conn, addr = self.server.accept()
-            request = await self.preprocess_request(conn, addr)
-            response = await self.process_request(request)
-            conn.sendall(response.encode())
-            conn.close()
+            gevent.spawn(self.on_receive, conn, addr)
+
+    def on_receive(self, connection, addr):
+        """
+        接收到连接时处理
+        @args:
+            connection 连接socket :socket
+            addr 发来连接的地址 :string
+        """
+        request = self.preprocess_request(connection, addr)
+        response = self.process_request(request)
+        connection.sendall(response.encode())
+        connection.close()
     
-    async def preprocess_request(self, connection, addr, chunk=512, timeout=0.5):
+    def preprocess_request(self, connection, addr, chunk=512, timeout=0.5):
         """
         将流式的请求数据处理为Request
         @args:
-            connection 连接的socket, 由socket.accept()得到
-            addr 发来连接的地址
-            chunk 流式数据的分块大小
-            timeout 定义一个时长timeout，当timeout秒后不再接收到数据，就认为数据已经传输完毕
+            connection 连接的socket, 由socket.accept()得到 :socket
+            addr 发来连接的地址 :string
+            chunk 流式数据的分块大小 :int
+            timeout 定义一个时长timeout，当timeout秒后不再接收到数据，就认为数据已经传输完毕 :number
         """
         content = b""
         connection.settimeout(timeout)
@@ -63,20 +74,21 @@ class BaseServer():
                 break
         return self.request_model(content, addr)
 
-    async def process_request(self, request):
+    def process_request(self, request):
         """
         处理request
         """
         return ""
 
-    
-
     def serve(self, start_msg=""):
         """
-        服务器运行的外部简化用法
+        服务器运行的重写用法
         """
-        sys.stdout.write(start_msg)
-        asyncio.run(self.run())
+        try:
+            sys.stdout.write(start_msg)
+            self.run()
+        except KeyboardInterrupt:
+            sys.exit(0)
 
     
 # 测试用标识符，置为True启用
