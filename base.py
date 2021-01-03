@@ -2,7 +2,7 @@
 @Author: Kowaine
 @Description: 一些基础的数据结构和类型
 @Date: 2021-01-03 22:25:39
-@LastEditTime: 2021-01-04 03:17:53
+@LastEditTime: 2021-01-04 03:21:39
 """
 from gevent import socket, monkey
 import sys
@@ -79,6 +79,8 @@ class BaseServer():
     def process_request(self, request):
         """
         处理request
+        @args:
+            request 请求 :Request
         """
         return ""
 
