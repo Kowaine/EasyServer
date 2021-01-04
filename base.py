@@ -2,7 +2,7 @@
 @Author: Kowaine
 @Description: 一些基础的数据结构和类型
 @Date: 2021-01-03 22:25:39
-@LastEditTime: 2021-01-04 03:47:00
+@LastEditTime: 2021-01-04 04:45:28
 """
 from gevent import socket, monkey
 import sys
@@ -33,6 +33,7 @@ class BaseServer():
         self.port = port
         self.max_connection = max_connection
         self.server = socket.socket()
+        self.server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, True)
         self.server.bind((host, port))
         self.request_model = request_model
 
@@ -53,8 +54,9 @@ class BaseServer():
             addr 发来连接的地址 :tuple
         """
         request = self.preprocess_request(connection, addr)
-        response = self.process_request(request)
-        connection.sendall(response.encode())
+        if request:
+            response = self.process_request(request)
+            connection.sendall(response.encode())
         connection.close()
     
     def preprocess_request(self, connection, addr, chunk=512, timeout=0.5):
@@ -71,9 +73,14 @@ class BaseServer():
         while True:
             try:
                 temp = connection.recv(chunk)
-                content += temp
+                if temp:
+                    content += temp
             except socket.timeout:
                 break
+        
+        # content为空则为空请求，或者连接已经断开，不再继续解析请求
+        if not content:
+            return None
         return self.request_model(content, addr)
 
     def process_request(self, request):
