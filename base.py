@@ -2,7 +2,7 @@
 @Author: Kowaine
 @Description: 一些基础的数据结构和类型
 @Date: 2021-01-03 22:25:39
-@LastEditTime: 2021-01-04 04:45:28
+@LastEditTime: 2021-01-05 05:24:54
 """
 from gevent import socket, monkey
 import sys
@@ -56,7 +56,8 @@ class BaseServer():
         request = self.preprocess_request(connection, addr)
         if request:
             response = self.process_request(request)
-            connection.sendall(response.encode())
+            if response:
+                connection.sendall(response.encode())
         connection.close()
     
     def preprocess_request(self, connection, addr, chunk=512, timeout=0.5):
