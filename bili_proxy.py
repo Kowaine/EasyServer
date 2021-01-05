@@ -2,7 +2,7 @@
 @Author: Kowaine
 @Description: 基于反向代理，处理bilibili番剧请求，结合 解除B站地区限制 油猴脚本使用
 @Date: 2021-01-04 19:00:19
-@LastEditTime: 2021-01-05 05:42:08
+@LastEditTime: 2021-01-05 15:44:43
 """
 
 import http_server
@@ -11,6 +11,8 @@ import config_reader
 from urllib.parse import unquote, urlparse
 import pycurl
 from io import BytesIO
+import sys
+import json
 
 monkey.patch_all()
 
@@ -103,11 +105,11 @@ class BiliProxy(http_server.EasyServer):
         """
         request = self.preprocess_request(connection, addr)
         if request:
-            print("开始处理请求")
+            sys.stdout.write("开始处理来自{}的请求\r\n".format(addr))
             response = self.process_request(request, connection)
             if response:
                 connection.sendall(response.encode())
-            print("处理完毕")
+            sys.stdout.write("处理完毕\r\n")
         connection.close()
 
     def process_request(self, request, connection):
@@ -168,6 +170,8 @@ class BiliProxy(http_server.EasyServer):
             curl.setopt(pycurl.FOLLOWLOCATION, False) # 禁用重定向
             curl.setopt(pycurl.SSL_VERIFYHOST, False) # 禁用https验证
             curl.setopt(pycurl.SSL_VERIFYPEER, False)
+            # curl.setopt(pycurl.SSL_VERIFYRESULT, False)
+            curl.setopt(pycurl.SSL_VERIFYSTATUS, False)
             curl.setopt(pycurl.VERBOSE, False) # 禁用某些汇报信息
             curl.setopt(pycurl.ENCODING, "utf-8")
             
@@ -176,7 +180,12 @@ class BiliProxy(http_server.EasyServer):
             curl.setopt(pycurl.WRITEFUNCTION, result_reader.write)
 
             # 发送请求
-            curl.perform()
+            try:
+                curl.perform()
+            except pycurl.error as e:
+                result_reader.close()
+                curl.close()
+                raise e
 
             ''' 处理返回数据 '''
             #获取头部长度
@@ -212,11 +221,17 @@ class BiliProxy(http_server.EasyServer):
             connection.send("\r\n".encode())
 
             # body行
+            response_json =  json.loads(unquote(response_body))
+            if "durl" in response_json:
+                response_domain = response_json['durl'][0]['url'].split("//", 1)[1].split("/", 1)[0]
+                sys.stdout.write("解析得到的服务器域名为：" + response_domain + "\r\n")
+            else:
+                sys.stdout.write("获取错误：" + unquote(response_body) + "\r\n")
             connection.send(response_body)
             return "\r\n\r\n"
                 
         except Exception as e:
-            print(e)
+            sys.stderr.write(str(e) + "\r\n")
             raise e
 
     def serve(self, start_msg=''):
