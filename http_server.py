@@ -2,7 +2,7 @@
 @Author: Kowaine
 @Description: 简单的http服务器
 @Date: 2021-01-03 21:59:24
-@LastEditTime: 2021-01-05 03:46:20
+@LastEditTime: 2021-01-12 21:29:12
 """
 
 import base
@@ -72,7 +72,7 @@ class EasyServer(base.BaseServer):
     """
     一个简单的http服务器
     """
-    def __init__(self, host, port, max_connection=1024, request_model=HTTPRequest):
+    def __init__(self, host, port, max_connection=1024, request_model=HTTPRequest, use_ipv6=False):
         """
         重写父类初始化函数，更换请求类的默认模板
         @args:
@@ -81,7 +81,7 @@ class EasyServer(base.BaseServer):
             max_connection 最大连接数 :int
             request_model 请求处理模板 :type
         """
-        super().__init__(host, port, max_connection, request_model)
+        super().__init__(host, port, max_connection, request_model, use_ipv6)
 
     def process_request(self, request):
         """

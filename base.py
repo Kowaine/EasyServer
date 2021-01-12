@@ -2,7 +2,7 @@
 @Author: Kowaine
 @Description: 一些基础的数据结构和类型
 @Date: 2021-01-03 22:25:39
-@LastEditTime: 2021-01-05 05:24:54
+@LastEditTime: 2021-01-12 21:25:09
 """
 from gevent import socket, monkey
 import sys
@@ -20,7 +20,7 @@ class Request(object):
 
 
 class BaseServer():
-    def __init__(self, host, port, max_connection=1024, request_model=Request):
+    def __init__(self, host, port, max_connection=1024, request_model=Request, use_ipv6=False):
         """
         初始化server
         @args:
@@ -32,9 +32,15 @@ class BaseServer():
         self.host = host
         self.port = port
         self.max_connection = max_connection
-        self.server = socket.socket()
-        self.server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, True)
-        self.server.bind((host, port))
+        if use_ipv6:
+            self.server = socket.socket(socket.AF_INET6)
+            self.server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, True)
+            ipv6_addr = socket.getaddrinfo(host, port)[0][-1]
+            self.server.bind(ipv6_addr)
+        else:
+            self.server = socket.socket()
+            self.server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, True)
+            self.server.bind((host, port))
         self.request_model = request_model
 
     def run(self):

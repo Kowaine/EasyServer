@@ -2,7 +2,7 @@
 @Author: Kowaine
 @Description: 基于反向代理，处理bilibili番剧请求，结合 解除B站地区限制 油猴脚本使用
 @Date: 2021-01-04 19:00:19
-@LastEditTime: 2021-01-12 21:13:26
+@LastEditTime: 2021-01-12 21:25:41
 """
 
 import http_server
@@ -26,7 +26,8 @@ class BiliConfiger(config_reader.Configer):
         },
         "local": {
             "host": "127.0.0.1",
-            "port": "8000"
+            "port": "8000",
+            "use_ipv6": False
         }
     }
     def use_proxy(self):
@@ -41,6 +42,17 @@ class BiliConfiger(config_reader.Configer):
                 return self.conf['proxy']['use_proxy'].lower() == "true"
         return self.DEFAULT_CONF['proxy']['use_proxy'].lower() == "true"
 
+    def use_ipv6(self):
+        """
+        钩子函数，检测是否配置使用ipv6
+        @returns
+            True/False :bool
+        """
+        # 若配置正确，则返回配置项，否则返回默认值
+        if "local" in self.conf:
+            if "use_ipv6" in self.conf['local']:
+                return self.conf['local']['use_ipv6'].lower() == "true"
+        return self.DEFAULT_CONF['local']['use_ipv6'].lower() == "true"
 
     def get_proxy(self):
         """
@@ -90,12 +102,9 @@ class BiliProxy(http_server.EasyServer):
     bilibili反向代理服务器
     """
     def __init__(self, host, port):
-        if ":" in host:
-            super().__init__("", port)
-            self.server = socket.socket(socket.AF_INET6)
-            self.server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, True)
-            ipv6_addr = socket.getaddrinfo(host, port)[0][-1]
-            self.server.bind(ipv6_addr)
+        cfg = BiliConfiger()
+        if cfg.use_ipv6():
+            super().__init__(host, port, use_ipv6=True)
         else:
             super().__init__(host, port)
         self.DOMAIN = "api.bilibili.com"
