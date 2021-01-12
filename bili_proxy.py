@@ -2,7 +2,7 @@
 @Author: Kowaine
 @Description: 基于反向代理，处理bilibili番剧请求，结合 解除B站地区限制 油猴脚本使用
 @Date: 2021-01-04 19:00:19
-@LastEditTime: 2021-01-05 15:44:43
+@LastEditTime: 2021-01-12 21:13:26
 """
 
 import http_server
@@ -90,7 +90,14 @@ class BiliProxy(http_server.EasyServer):
     bilibili反向代理服务器
     """
     def __init__(self, host, port):
-        super().__init__(host, port)
+        if ":" in host:
+            super().__init__("", port)
+            self.server = socket.socket(socket.AF_INET6)
+            self.server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, True)
+            ipv6_addr = socket.getaddrinfo(host, port)[0][-1]
+            self.server.bind(ipv6_addr)
+        else:
+            super().__init__(host, port)
         self.DOMAIN = "api.bilibili.com"
         self.PC_PATH = "/pgc/player/web/playurl"
         self.APP_PATH = "/pgc/player/api/playurl"
